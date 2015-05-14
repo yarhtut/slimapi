@@ -1,5 +1,6 @@
 <?php
-
+header("access-control-allow-origin: *");
+header('Content-Type: application/json');
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -114,61 +115,19 @@ $app->group('/admin', function () use ($db,$app) {
     /*------------------------------------API invoke--------------------*/
 ;$app->group('/api', function () use ($db,$app) {
 
+
       //API admin controller
+
     //------------------------------------------lIST VIEW FOR SANCTUARY
     //define our response back to ajax
     $response['success'] = false;
     $response['data'] = null;
-	$app->get('/sendData', function () use($db,$app, $response) {
-	 
-        $userDetails = $app->request->get('userDetails');
-		$_data = 	$app->request->get('data');
-        //define our success
-        $success = false; //predine failed response
 
-        //pass json
-		$user = json_decode($userDetails);
-        $data = json_decode($_data);
-
-        //cleanup user from mobile request
-        $user = (isset($user[0])) ? $user[0] : $user;
-
-
-        //our 1 line SQL statement PLEASE YAR NO BREAK this will check username & password exist
-        $SQL_STATEMENT = "INSERT INTO school_activity(`id`, `user_id`, `cat_id`, `clicked`) VALUES(null,(SELECT id FROM members WHERE user_name = '{$user->email}' AND pass_word = '{$user->password}'),?,?);";
-
-
-        $stmt = $db->prepare($SQL_STATEMENT);
-
-        foreach($data as $key => $value)
-        {
-            //as we are bashing the dbase always use a prepare statment i will teach you yar...
-            $stmt->bind_param("ii",$value->catId,$value->CLICKED);
-
-            if ($stmt->execute()) {
-                // it worked
-                $success = true;
-            } else {
-                // it didn't this wouldnt work if user didnt have proper username & password
-                //maybe add response back message
-                $response['data'] = "Inccorect user details";
-                //waist of time looping other clicks
-                break;
-            }
-
-		}		
-		
-
-
-       $response['success'] = $success;
-        //$response['data'] = $userDetails;
-        returnResponse($response);
-        //$response['success'] = $success;
-    });
     $app->get('/list/all', function () use($db,$app, $response) {
 
         $SQL = "SELECT * FROM `listview`";
         $cat_results = $db->query($SQL);
+
 
         $success = ($cat_results->num_rows > 0) ? true : false;
         $response['success'] = $success;
@@ -185,7 +144,6 @@ $app->group('/admin', function () use ($db,$app) {
         //$response['success'] = $success;
         //echo json_encode($results);
     });
-
 
     $app->get('/list/:cat', function ($cat) use($db,$app, $response) {
 
@@ -251,32 +209,7 @@ $app->group('/admin', function () use ($db,$app) {
 
         $response['data'] = $results;
 
-       // returnResponse($response);
-        echo $_GET['callback']."(".json_encode($response).")";
-        //$response['success'] = $success;
-    });
-
-    //---------------------------------------------Member json data call from api
-    $app->get('/members/:type', function ($cat) use($db,$app, $response) {
-
-        $SQL = "SELECT * FROM `members` WHERE `type_admin` = '0'";
-        $type_members = $db->query($SQL);
-
-        $success = ($type_members ->num_rows >0) ?true: false;
-
-
-        $response['success'] = $success;
-
-        $results = array();
-
-        while($result = $type_members->fetch_assoc())
-            $results[] = $result;
-
-
-        $response['data'] = $results;
-
-        // returnResponse($response);
-        echo $_GET['callback']."(".json_encode($response).")";
+        returnResponse($response);
         //$response['success'] = $success;
     });
     //-------------------------------------------------ADMIN ENABLE WHICH IS ACTIVE OR NOT
@@ -304,10 +237,10 @@ $app->group('/admin', function () use ($db,$app) {
         }
 
     });
-    //============================LIST VIEW FOR EDUCATION ONLY SHOW WHICH IS ACTIVE '1' BY ADMIN==========
+    //----------------------------LIST VIEW FOR EDUCATION ONLY SHOW WHICH IS ACTIVE '1' BY ADMIN
     $app->get('/list/:cat/:active', function ($cat, $active) use($db,$app, $response) {
         $active_request = ($active == 'active')? 1 : 0 ;
-        $SQL = "SELECT * FROM `listview` WHERE `list_cat` = '$cat' AND `list_active` = '$active_request';";
+        $SQL = "SELECT * FROM `listview` WHERE `list_cat` = '$cat' AND `list_active` = '$active_request'";
         $cat_results = $db->query($SQL);
 
 
@@ -327,30 +260,9 @@ $app->group('/admin', function () use ($db,$app) {
         //$response['success'] = $success;
     });
 
-    //============================LIST VIEW FOR EDUCATION ONLY SHOW WHICH IS ACTIVE '1' BY ADMIN==========
-    $app->get('/list/:active', function ( $active) use($db,$app, $response) {
-        $active_request = ($active == 'active')? 1 : 0 ;
-        $SQL = "SELECT * FROM `listview` WHERE `list_active` = '$active_request';";
-        $cat_results = $db->query($SQL);
 
 
-        $success = ($cat_results->num_rows > 0) ? true : false;
-        $response['success'] = $success;
-
-        $results = array();
-
-        while($result = $cat_results->fetch_assoc())
-            $results[] = $result;
-
-
-        $response['data'] = $results;
-
-        $response['debug']=$SQL;
-        returnResponse($response);
-        //$response['success'] = $success;
-    });
-
-    //========================================update our list from admin panel===========================
+    //========================================update our list from admin panel
     $app->post('/update/:action', function ($action) use($db,$app, $response) {
         //security check ONLY admin can update
         //CHECK SESSION ACCOUNT
@@ -364,7 +276,6 @@ $app->group('/admin', function () use ($db,$app) {
                // $active = $app->request->post("data");
                 $list_id = $app->request->post("list_id");
                 $list_name = $app->request->post("list_name");
-                $list_type = $app->request->post("list_type");
                 $list_cat = $app->request->post("list_cat");
                 $list_img = $app->request->post("list_img");
                 $list_sound= $app->request->post("list_sound");
@@ -379,9 +290,9 @@ $app->group('/admin', function () use ($db,$app) {
                     // $active = $app->request->post("data");
                     // $IDS = implode(",", $items);
 
-                    $SQL_INSERT = "INSERT INTO `listview` (`list_name`,`list_cat`,`list_type`, `list_img`, `list_sound`,`list_points`, `list_desc`) VALUES ( '$list_name','$list_cat','$list_type', '$list_img', '$list_sound','$list_points', '$list_desc');";
+                    $SQL_INSERT = "INSERT INTO `zealandia`.`listview` (`list_name`,`list_cat`, `list_img`, `list_sound`,`list_points`, `list_desc`) VALUES ( '$list_name','$list_cat', '$list_img', '$list_sound','$list_points', '$list_desc');";
 
-                    //returnResponse($SQL_INSERT);
+
                     $add_new = $db->query($SQL_INSERT);
                     if ($add_new){
                         $response['success'] = true;
@@ -414,7 +325,9 @@ $app->group('/admin', function () use ($db,$app) {
                 if ($action == 'update'){
                     // $active = $app->request->post("data");
                    // $IDS = implode(",", $items);
-                    $SQL_UPDATE = "UPDATE `listview` SET `list_name` = '$list_name', `list_cat` = '$list_cat',`list_type`='$list_type', `list_img` = '$list_img' , `list_sound` = '$list_sound', `list_points` = '$list_points' , `list_desc` = '$list_desc' WHERE `list_id` = '$list_id';";
+
+                    $SQL_UPDATE = "UPDATE `listview` SET `list_name` = '$list_name', `list_img` = '$list_img' , `list_sound` = '$list_sound', `list_points` = '$list_points' , `list_desc` = '$list_desc' WHERE `list_id` = '$list_id';";
+
 
                     $update = $db->query($SQL_UPDATE);
                     if ($update){
@@ -429,11 +342,8 @@ $app->group('/admin', function () use ($db,$app) {
                 }
                 if ($action == 'active'){
                     // $active = $app->request->post("data");
-
-                    //check $items contains length string or possible use is_array
-
                     $IDS = implode(",", $items);
-                    $SQL = "UPDATE  `listview` SET  `list_active` =  '1' WHERE `list_id` IN($IDS) ";
+                    $SQL = "UPDATE  `zealandia`.`listview` SET  `list_active` =  '1' WHERE `list_id` IN($IDS) ";
                     $update = $db->query($SQL);
                     if ($update){
                         $response['success'] = true;
@@ -449,7 +359,7 @@ $app->group('/admin', function () use ($db,$app) {
 
 
                     $IDS = implode(",", $items);
-                    $SQL = "UPDATE  `listview` SET  `list_active` =  '0' WHERE `list_id` IN($IDS) ";
+                    $SQL = "UPDATE  `zealandia`.`listview` SET  `list_active` =  '0' WHERE `list_id` IN($IDS) ";
                     $update = $db->query($SQL);
                     if ($update){
                         $response['success'] = true;
@@ -470,8 +380,6 @@ $app->group('/admin', function () use ($db,$app) {
         }else{
             $response['data'] = "User not logged in";
         }
-        //echo json_encode($response);
-        //echo $_GET['callback']."(".json_encode($response).")";
         returnResponse($response);
     });
 
@@ -489,17 +397,14 @@ $app->group('/admin', function () use ($db,$app) {
                 $member_id = $app->request->post("member_id");
                 $member_username = $app->request->post("member_username");
                 $member_password = $app->request->post("member_password");
-                //$member_mobile = $app->request->post("member_mobile");
-                $school_name = $app->request->post("school_name");
-
-                $type_admin = $app->request->post("type_admin");
+                $member_mobile = $app->request->post("member_mobile");
 
                 //lets update MEMBER
                 //deletes
 
                 if ($action == 'addNewMember'){
 
-                    $SQL_INSERT = "INSERT INTO `members` (`user_name`, `pass_word`, `school_name`) VALUES ('$member_username', '$member_password', '$school_name');";
+                    $SQL_INSERT = "INSERT INTO `zealandia`.`members` (`user_name`, `pass_word`, `cellnumber`) VALUES ('$member_username', '$member_password', '$member_mobile');";
 
                     $add_new = $db->query($SQL_INSERT);
                     if ($add_new){
@@ -531,9 +436,10 @@ $app->group('/admin', function () use ($db,$app) {
                 }
                 if ($action == 'update'){
                     // $active = $app->request->post("data");
+                    // $IDS = implode(",", $items);
 
-                   // $SQL_UPDATE = "UPDATE `members` SET `user_name` = '$member_username', `pass_word` = '$member_password' , `cellnumber` = '$member_mobile' WHERE `id` = '$member_id';";
-                    $SQL_UPDATE = "UPDATE `members` SET `user_name` = '$member_username', `pass_word` = '$member_password' ,`school_name` = '$school_name' WHERE `id` = '$member_id';";
+                    $SQL_UPDATE = "UPDATE `members` SET `user_name` = '$member_username', `pass_word` = '$member_password' , `cellnumber` = '$member_mobile' WHERE `id` = '$member_id';";
+
 
                     $update = $db->query($SQL_UPDATE);
                     if ($update){
@@ -556,15 +462,13 @@ $app->group('/admin', function () use ($db,$app) {
         }else{
             $response['data'] = "User not logged in";
         }
-        //echo json_encode($response);
-        //echo $_GET['callback']."(".json_encode($response).")";
         returnResponse($response);
     });
 
 
 
 
-    //------------------------------------------------- LOGIN-----------------------------------------------
+    //------------------------------------------------- LOGIN
     $app->post('/login', function () use($db,$app, $response) {
         $username = $app->request->post('username');
         $password = $app->request->post('password');
@@ -596,14 +500,21 @@ $app->group('/admin', function () use ($db,$app) {
             $response['data'] = "incorrect details";
             $response['success'] = false;
         }
-        echo json_encode($response);
-        //returnResponse($response);
+
+
+
+        returnResponse($response);
         //echo $_GET['callback']."(".json_encode($response).")";
 
     });
     $app->get('/login', function () use($db,$app, $response) {
         $username = $app->request->get('username');
         $password = $app->request->get('password');
+
+
+        //we check users login details
+
+        //   $type =
 
         //select the user_name from the admin table assign to $SQL
         $SQL = "SELECT * FROM `members` WHERE  user_name = '$username' AND pass_word = '$password' ";
@@ -624,7 +535,7 @@ $app->group('/admin', function () use ($db,$app) {
                    $_SESSION['logged_in'] = true;
 				$response['data'] = "logged in okay";
                    $response['success'] = true;
-
+				    
                    //set session user details exist
 
                }
@@ -636,12 +547,12 @@ $app->group('/admin', function () use ($db,$app) {
                }
 
 
-      //  echo json_encode($response);
-       // echo $_GET['callback']."(".json_encode($response).")";
-       returnResponse($response);
+
+        //echo $_GET['callback']."(".json_encode($response).")";
+        returnResponse($response);
     });
 
-  
+
 });
 //-------------------------------------------------any hooks to slim
 
@@ -657,15 +568,8 @@ $app->hook('slim.before.router', function () use ($app) {
 $app->run();
 
 function returnResponse($data){
-	
-	header("access-control-allow-origin: *");
-	header('Content-Type: application/json');
-
-
     if (isset($_GET['mobile']) && $_GET['mobile'] == "1" )
         echo json_encode($data['data']);
     else
     echo $_GET['callback']."(".json_encode($data).")";
-
-    die();
 }
